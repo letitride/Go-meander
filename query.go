@@ -14,11 +14,11 @@ import (
 var APIKey string
 
 type Place struct {
-	*googleGeometry `json:"geometry"`
-	Name            string         `json:"name"`
-	Icon            string         `json:"icon"`
-	Photos          []*googlePhoto `json:"photos"`
-	Vicinity        string         `json:"vicinity"`
+	Geometry *googleGeometry `json:"geometry"`
+	Name     string          `json:"name"`
+	Icon     string          `json:"icon"`
+	Photos   []*googlePhoto  `json:"photos"`
+	Vicinity string          `json:"vicinity"`
 }
 
 type googleResponse struct {
@@ -26,7 +26,7 @@ type googleResponse struct {
 }
 
 type googleGeometry struct {
-	*googleLocation `json:"location"`
+	Location *googleLocation `json:"location"`
 }
 
 type googleLocation struct {
@@ -45,8 +45,8 @@ func (p *Place) Public() interface{} {
 		"icon":     p.Icon,
 		"photos":   p.Photos,
 		"vicinity": p.Vicinity,
-		"lat":      p.Lat,
-		"lng":      p.Lng,
+		"lat":      p.Geometry.Location.Lat,
+		"lng":      p.Geometry.Location.Lng,
 	}
 }
 
@@ -61,21 +61,27 @@ type Query struct {
 func (q *Query) find(types string) (*googleResponse, error) {
 	u := "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
 	vals := make(url.Values)
+
 	vals.Set("location", fmt.Sprintf("%g,%g", q.Lat, q.Lng))
 	vals.Set("radius", fmt.Sprintf("%d", q.Radius))
 	vals.Set("types", types)
 	vals.Set("key", APIKey)
 	if len(q.CostRangeStr) > 0 {
 		r := ParseCostRange(q.CostRangeStr)
-		vals.Set("minprice", fmt.Sprintf("%d", int(r.To)-1))
+		vals.Set("minprice", fmt.Sprintf("%d", int(r.From)-1))
+		vals.Set("maxprice", fmt.Sprintf("%d", int(r.To)-1))
 	}
 	res, err := http.Get(u + "?" + vals.Encode())
+	log.Println("取得結果", res.Body)
+
 	if err != nil {
+		log.Println("問い合わせ失敗:", err)
 		return nil, err
 	}
 	defer res.Body.Close()
 	var response googleResponse
 	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+		log.Println("解析失敗:", err)
 		return nil, err
 	}
 	return &response, nil
