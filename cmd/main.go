@@ -2,15 +2,18 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/joho/godotenv"
 	"meander"
 	"net/http"
+	"os"
 	"runtime"
 )
 
 func main() {
 	//利用するCPU数の最大値の指定=すべて
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	//meander.APIKey = "TODO"
+	godotenv.Load("../.env")
+	meander.APIKey = os.Getenv("APIKEY")
 	http.HandleFunc("/journeys", func(w http.ResponseWriter, r *http.Request) {
 		respond(w, r, meander.Journeys)
 	})
